@@ -22,6 +22,8 @@ services:
       - DATABASE_URL=postgresql+psycopg2://postgres:password@db:5432/foam_db
     depends_on:
       - db
+    volumes:
+      - .:/foam
 
 volumes:
   pgdata:
