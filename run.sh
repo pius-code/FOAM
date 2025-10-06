@@ -1,3 +1,3 @@
 #!/bin/bash
 alembic upgrade head
-uvicorn src.api.main:app --host 0.0.0.0 --port 8080
+uvicorn src.api.main:app --host 0.0.0.0 --port 8080 --reload

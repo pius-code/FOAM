@@ -6,16 +6,17 @@ from sqlalchemy import (
     DateTime,
 )
 from src.db.models.base import Base
-from sqlalchemy.dialects.postgresql import UUID as uuid
+from sqlalchemy.dialects.postgresql import UUID
+import uuid
 
 
 class Message_scheduler(Base):
     __tablename__ = "messages_scheduler"
     messages_scheduler_id = Column(
-        uuid(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True
     )
     message_id = Column(
-        uuid(as_uuid=True), ForeignKey("messages.message_id"), nullable=False
+        UUID(as_uuid=True), ForeignKey("messages.message_id"), nullable=False
     )
     frequency_type = Column(String(50), nullable=False)
     start_date = Column(DateTime, nullable=False)

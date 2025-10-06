@@ -1,4 +1,5 @@
 version: "3.8"
+
 services:
   db:
     image: postgres:15
@@ -11,6 +12,20 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: foam_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+
   web:
     build:
       context: .
@@ -20,10 +35,41 @@ services:
       - "8080:8080"
     environment:
       - DATABASE_URL=postgresql+psycopg2://postgres:password@db:5432/foam_db
+      - REDIS_URL=redis://redis:6379/0
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
     volumes:
-      - .:/foam
+      - .:/app
+
+  celery_worker:
+    build: .
+    container_name: foam_celery_worker
+    command: celery -A src.worker.celery_app worker --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - db
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://postgres:password@db:5432/foam_db
+      - REDIS_URL=redis://redis:6379/0
+
+  celery_beat:
+    build: .
+    container_name: foam_celery_beat
+    command: celery -A src.worker.celery_app beat --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - db
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://postgres:password@db:5432/foam_db
+      - REDIS_URL=redis://redis:6379/0
 
 volumes:
   pgdata:
+  redisdata:

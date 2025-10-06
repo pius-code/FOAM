@@ -1,130 +1,395 @@
-# docker and devops stuff
+# FOAM - Backend Development Learning Project
 
-[ ] change the uvicorn set up to gunicorn with multiple workers
-[x] Task for tomorrow 17th Sept - understand and set up databases, alembic, spin up a simple repo , model , create and store in database
-[ ] auotmate imports for the alembic models, no need to manually specify them using **init**.py version
+## What This App Is About
 
-Notes
+[TODO: Add project description here]
 
-# Summary of Progress So Far (FastAPI + Postgres + Docker Journey)
+---
 
-Backend & Databases
+## Table of Contents
 
-You learned that for backend development, you can choose between databases (MongoDB, Postgres, etc.).
+1. [Learning Journey Overview](#learning-journey-overview)
+2. [Project Architecture](#project-architecture)
+3. [Day 1: Docker & FastAPI Basics](#day-1-docker--fastapi-basics)
+4. [Day 2: Database Migrations with Alembic](#day-2-database-migrations-with-alembic)
+5. [Day 3: Task Scheduling with Celery](#day-3-task-scheduling-with-celery)
+6. [Project Structure](#project-structure)
+7. [Development Roadmap](#development-roadmap)
 
-MongoDB can be used directly via a client, while Postgres usually requires an ORM/driver.
+---
 
-Postgres can run locally, but you don’t need to install it if you use Docker (preferred, more professional).
+## Learning Journey Overview
 
-Docker & Docker Compose
+This repository documents my journey learning backend development with FastAPI, PostgreSQL, Docker, and asynchronous task processing. Each section below explains **what** I built, **why** it matters, and **where** to find it in the codebase.
 
-Docker runs services in containers.
+---
 
-Docker Compose orchestrates multiple containers (your FastAPI app + Postgres DB).
+## Project Architecture
 
-For the app, you used build: . (custom image).
+### Tech Stack
 
-For the DB, you used image: postgres:15 (official prebuilt image).
+- **Backend Framework**: FastAPI
+- **Database**: PostgreSQL 15
+- **ORM**: SQLAlchemy
+- **Migration Tool**: Alembic
+- **Task Queue**: Celery + Celery Beat
+- **Message Broker**: Redis
+- **Containerization**: Docker + Docker Compose
 
-Project Setup
+### Services Running
 
-Dockerfile: installs Python, dependencies from requirements.txt, copies code, and starts the app via run.sh.
+- `foam_web` - FastAPI application (port 8000)
+- `foam_postgres` - PostgreSQL database (port 5432)
+- `foam_redis` - Redis message broker (port 6379)
+- `foam_celery_worker` - Celery worker for background tasks
+- `foam_celery_beat` - Celery Beat scheduler for cron-like jobs
 
-docker-compose.yml: defines two services:
+---
 
-web: FastAPI app, builds from Dockerfile, exposes port 8000.
+## Day 1: Docker & FastAPI Basics
 
-db: Postgres, official image, exposes port 5432, persistent storage via volumes.
+### What I Learned
 
-requirements.txt: includes FastAPI, psycopg2-binary, etc. (fixed typo psycorg2-binary).
+**Backend & Databases**
 
-run.sh: runs Alembic migrations (skipped for now) and starts the app using Gunicorn+Uvicorn or just Uvicorn.
+- Understood the difference between NoSQL (MongoDB) and SQL (PostgreSQL) databases
+- Learned that MongoDB uses direct clients while PostgreSQL requires an ORM/driver
+- Decided to use Docker instead of local PostgreSQL installation (more professional, portable)
 
-FastAPI Basics
+**Docker & Docker Compose**
 
-Created a simple main.py:
+- Docker runs services in isolated containers
+- Docker Compose orchestrates multiple containers (app + database)
+- Learned the difference between `build: .` (custom image) and `image: postgres:15` (official prebuilt image)
 
+### What I Built
+
+**Simple FastAPI Application**
+
+```python
 from fastapi import FastAPI
 app = FastAPI()
 
 @app.get("/")
 def welcome():
-return {"message": "Welcome to FOAM 🎉"}
+    return {"message": "Welcome to FOAM 🎉"}
+```
 
-Learned how to run locally with uvicorn main:app --reload.
+📁 **Location**: `src/main.py`
 
-Understood that FastAPI auto-generates /docs (Swagger UI).
+**Docker Configuration**
 
-Errors & Fixes
+**Dockerfile** - Installs Python, dependencies, copies code, starts the app
+📁 **Location**: `Dockerfile`
 
-Build failed due to misspelling psycorg2-binary → corrected to psycopg2-binary.
+**docker-compose.yml** - Defines services (web + db), manages networking and volumes
+📁 **Location**: `docker-compose.yml`
 
-Learning Philosophy
+**run.sh** - Entry point script that runs migrations and starts the server
+📁 **Location**: `run.sh`
 
-Start simple: use uvicorn instead of Gunicorn, python:3.12 base image instead of slim to avoid extra setup.
+### Key Files Created
 
-Skip Alembic for now until fundamentals are clear.
+| File                 | Purpose                                | Location              |
+| -------------------- | -------------------------------------- | --------------------- |
+| `Dockerfile`         | Defines app container build process    | `/Dockerfile`         |
+| `docker-compose.yml` | Orchestrates multi-container setup     | `/docker-compose.yml` |
+| `requirements.txt`   | Python dependencies                    | `/requirements.txt`   |
+| `run.sh`             | Startup script for migrations + server | `/run.sh`             |
+| `main.py`            | FastAPI application entry point        | `/src/main.py`        |
 
-You want to fully understand why each piece exists before moving forward. #
+### Lessons Learned
 
-### Day 2 , what I have learnt
+✅ Start simple: use `uvicorn` before `Gunicorn`, use `python:3.12` before `slim` images
+✅ Fixed typo: `psycorg2-binary` → `psycopg2-binary`
+✅ FastAPI auto-generates API docs at `/docs` (Swagger UI)
 
-Alembic & Migrations
+### Running the App
 
-Alembic helps you apply database schema changes safely without losing data.
+```bash
+# Start all services
+docker compose up --build
 
-You:
+# Access the app
+http://localhost:8000
 
-alembic init migrations → sets up migration folder.
+# View API documentation
+http://localhost:8000/docs
+```
 
-Configure it to connect to Postgres (via DATABASE_URL).
+---
 
-Point it to SQLAlchemy models (Base.metadata).
+## Day 2: Database Migrations with Alembic
 
-Run alembic revision --autogenerate -m "message" to create migration scripts.
+### What I Learned
 
-Run alembic upgrade head to apply them.
+**Alembic - Database Version Control**
 
-If nothing changed in models → Alembic creates an empty migration file.
+- Alembic manages database schema changes safely without data loss
+- Works like "Git for your database structure"
+- Automatically generates SQL migration scripts from SQLAlchemy models
 
-Don’t automate revision in run.sh (only upgrade head), because revision is a developer decision.
+**SQLAlchemy ORM**
 
-SQLAlchemy ORM
+- Instead of writing raw SQL, define Python classes as database tables
+- Alembic detects model changes and generates migrations
+- Can query using Python: `session.query(User).filter(User.id == 68).first()`
 
-Instead of writing raw SQL, you define models (Python classes).
+### What I Built
 
-Example:
+**User Model Example**
 
+```python
 class User(Base):
-**tablename** = "users"
-id = Column(Integer, primary_key=True, index=True)
-username = Column(String(50), nullable=False, index=True)
-email = Column(String(100), unique=True, nullable=False, index=True)
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(50), nullable=False, index=True)
+    email = Column(String(100), unique=True, nullable=False, index=True)
+```
 
-Alembic inspects these models and generates SQL migrations for you.
+📁 **Location**: `src/db/models/users.py`
 
-You can still use SQLAlchemy ORM to query like:
+**Alembic Configuration**
 
-session.query(User).filter(User.id == 68).first()
+- Connected Alembic to PostgreSQL via `DATABASE_URL`
+- Pointed to SQLAlchemy models (`Base.metadata`)
+- Configured automatic model detection
 
-How Alembic sees models
+📁 **Location**: `alembic.ini`, `migrations/env.py`
 
-Alembic only sees models that are imported into Python.
+### Key Concepts
 
-That’s why in env.py you had to import them (e.g., from src.db.models.users import User).
+**Migration Workflow**
 
-Problem: becomes unmanageable with 100s of models.
+1. Define/modify SQLAlchemy models
+2. `alembic revision --autogenerate -m "description"` - Creates migration
+3. `alembic upgrade head` - Applies migration to database
 
-Solutions:
+**Model Discovery Problem & Solution**
 
-Create models/**init**.py that imports all models.
+❌ **Problem**: Alembic only sees imported models - unmanageable with 100+ models
 
-Use dynamic import (pkgutil + importlib) to automatically import every model in the folder.
+✅ **Solution**: Auto-import all models using `__init__.py`
 
-👉 Big picture:
+```python
+# src/db/models/__init__.py
+from .users import User
+from .reminders import Reminder
+# ... etc
+```
 
-Alembic = database version control.
+📁 **Location**: `src/db/models/__init__.py`
 
-SQLAlchemy = define tables & query with Python.
+### Key Files Created
 
-Together → you rarely touch raw SQL directly.
+| File                 | Purpose                   | Location                     |
+| -------------------- | ------------------------- | ---------------------------- |
+| `alembic.ini`        | Alembic configuration     | `/alembic.ini`               |
+| `env.py`             | Alembic environment setup | `/migrations/env.py`         |
+| `models/__init__.py` | Auto-imports all models   | `/src/db/models/__init__.py` |
+| `users.py`           | User model example        | `/src/db/models/users.py`    |
+
+### Important Notes
+
+⚠️ **Don't automate `alembic revision`** - it's a developer decision
+✅ **Automate `alembic upgrade head` in `run.sh`** - applies migrations on startup
+
+---
+
+## Day 3: Task Scheduling with Celery
+
+### What I Learned
+
+**Cron Jobs - The Basics**
+
+- Scheduled tasks that run automatically at fixed times/intervals
+- Like setting server reminders without manual intervention
+- Example: send reports daily at midnight, clean logs every hour
+
+**Celery - Distributed Task Queue**
+
+- Runs background jobs asynchronously (outside main app)
+- Processes tasks sent by the application or scheduler
+- Uses Redis as message broker for task communication
+
+**Celery Beat - The Scheduler**
+
+- Celery's "cron system" for Python
+- Sends tasks to workers at scheduled intervals
+- Configured via `beat_schedule` in Celery app
+
+### How It Works
+
+```
+┌─────────────┐      ┌─────────┐      ┌────────────────┐      ┌──────────┐
+│ Celery Beat │─────>│  Redis  │─────>│ Celery Worker  │─────>│ Database │
+│ (Scheduler) │      │ (Broker)│      │   (Executor)   │      │          │
+└─────────────┘      └─────────┘      └────────────────┘      └──────────┘
+     |                                          |
+     | Every 60s                                | Runs task
+     | Send task                                | Updates DB
+```
+
+### What I Built
+
+**Celery App Configuration**
+
+```python
+celery_app = Celery(
+    "foam",
+    broker=REDIS_URL,
+    backend=REDIS_URL,
+    include=["src.worker.tasks.scheduler.task_scheduler"]
+)
+
+celery_app.conf.beat_schedule = {
+    "foam_worker": {
+        "task": "src.worker.tasks.scheduler.task_scheduler.schedule_reminder",
+        "schedule": 60.0,  # Every 60 seconds
+    }
+}
+```
+
+📁 **Location**: `src/worker/celery_app.py`
+
+**Task Function**
+
+```python
+@celery_app.task
+def schedule_reminder():
+    # Check database for due reminders
+    # Execute reminders that are due now
+    pass
+```
+
+📁 **Location**: `src/worker/tasks/scheduler/task_scheduler.py`
+
+### Key Concepts
+
+**Dynamic Scheduling Pattern**
+Instead of creating one Beat task per reminder:
+
+- Create ONE universal Beat task that runs every minute
+- That task checks the database for due reminders (e.g., "Monday 6PM")
+- Only executes reminders that are due now
+- ✅ New reminders = new DB entries (no code changes needed)
+
+**Task Registration**
+Celery must know where tasks are defined:
+
+```python
+include=["src.worker.tasks.scheduler.task_scheduler"]
+```
+
+### Debugging the "Unregistered Task" Error
+
+❌ **Error**: `Received unregistered task of type 'src.worker.tasks...'`
+
+**Root Cause**: Celery worker couldn't find the task
+
+✅ **Solution**:
+
+1. Ensure correct import path in `include=[]`
+2. Match task name exactly: `"src.worker.tasks.scheduler.task_scheduler.schedule_reminder"`
+3. Verify task is decorated with `@celery_app.task`
+
+### Key Files Created
+
+| File                | Purpose                              | Location                                        |
+| ------------------- | ------------------------------------ | ----------------------------------------------- |
+| `celery_app.py`     | Celery configuration & Beat schedule | `/src/worker/celery_app.py`                     |
+| `task_scheduler.py` | Scheduled task functions             | `/src/worker/tasks/scheduler/task_scheduler.py` |
+| `reminder_task.py`  | Reminder execution logic             | `/src/worker/tasks/reminder_task.py`            |
+
+### Running Celery
+
+```bash
+# Start all services (includes Celery worker + Beat)
+docker compose up --build
+
+# View Celery logs
+docker compose logs foam_celery_worker
+docker compose logs foam_celery_beat
+```
+
+---
+
+## Project Structure
+
+```
+FOAM/
+├── src/
+│   ├── main.py                    # FastAPI entry point
+│   ├── api/
+│   │   └── routes/               # API endpoints
+│   ├── db/
+│   │   ├── models/               # SQLAlchemy models
+│   │   │   ├── __init__.py       # Auto-imports all models
+│   │   │   └── users.py          # Example: User model
+│   │   └── database.py           # Database connection
+│   └── worker/
+│       ├── celery_app.py         # Celery configuration
+│       └── tasks/
+│           ├── scheduler/
+│           │   └── task_scheduler.py  # Scheduled tasks
+│           └── reminder_task.py  # Task implementations
+├── migrations/                    # Alembic migrations
+│   └── env.py                    # Alembic environment
+├── Dockerfile                     # App container definition
+├── docker-compose.yml            # Multi-container orchestration
+├── requirements.txt              # Python dependencies
+├── run.sh                        # Startup script
+└── alembic.ini                   # Alembic configuration
+```
+
+---
+
+## Development Roadmap
+
+### Completed ✅
+
+- [x] Set up FastAPI + Docker + PostgreSQL
+- [x] Configure Alembic migrations
+- [x] Set up Celery + Celery Beat + Redis
+- [x] Fix task registration issues
+- [x] Design dynamic scheduling system
+
+### TODO 📝
+
+- [ ] Change uvicorn setup to Gunicorn with multiple workers
+- [ ] Automate model imports for Alembic (no manual specification in `__init__.py`)
+- [ ] Implement reminder creation API
+- [ ] Build notification system
+- [ ] Add user authentication
+
+---
+
+## Key Learnings
+
+### Philosophy
+
+> **Start simple, understand fully, then optimize.**
+
+- Use basic tools first (uvicorn → Gunicorn, python:3.12 → slim)
+- Understand WHY each piece exists before moving forward
+- Skip complexity (like Alembic) until fundamentals are clear
+
+### Best Practices Discovered
+
+1. **Docker**: Prefer Docker over local installations (portable, consistent)
+2. **Migrations**: Never automate `alembic revision`, only `upgrade head`
+3. **Task Queues**: One dynamic task > Many hardcoded tasks
+4. **Structure**: Organize by domain (api/, db/, worker/) not by type
+
+---
+
+## Resources & Documentation
+
+- [FastAPI Docs](https://fastapi.tiangolo.com/)
+- [Celery Documentation](https://docs.celeryq.dev/)
+- [Alembic Tutorial](https://alembic.sqlalchemy.org/en/latest/tutorial.html)
+- [Docker Compose Reference](https://docs.docker.com/compose/)
+
+---
+
+_This README serves as both project documentation and a learning journal. Each section reflects real problems solved and lessons learned during development._

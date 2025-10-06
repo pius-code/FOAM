@@ -1,15 +1,16 @@
 from sqlalchemy import Column, Integer, DateTime, ForeignKey, func, Time, Date
 from src.db.models.base import Base
-from sqlalchemy.dialects.postgresql import UUID as uuid
+from sqlalchemy.dialects.postgresql import UUID
+import uuid
 
 
 class Schedule_times(Base):
     __tablename__ = "schedule_times"
     schedule_times_id = Column(
-        uuid(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True
     )
     message_scheduler_id = Column(
-        uuid(as_uuid=True),
+        UUID(as_uuid=True),
         ForeignKey("messages_scheduler.messages_scheduler_id"),
         nullable=False,
     )

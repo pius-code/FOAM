@@ -9,7 +9,7 @@ from alembic import context
 
 # Import your models here so Alembic can detect them
 from src.db.models.base import Base
-from src.db.models.users import User
+import src.db.models  # noqa
 
 # Get the Alembic Config object
 config = context.config
