@@ -14,8 +14,12 @@ class Event(Base):
     user_id = Column(
         UUID(as_uuid=True), ForeignKey("users.user_id"), nullable=False, index=True
     )
-    event_name = Column(String(255), nullable=False)
-    event_type = Column(String(100), nullable=False)
+    event_name = Column(
+        String(255), nullable=False
+    )  # personal name of the reminder , maybe Pius church follow up
+    event_type = Column(
+        String(100), nullable=False
+    )  # would be an enum so maybe follow up , campaign , reminder etc
     event_description = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(
