@@ -12,3 +12,7 @@ def create_message(db: Session, message: MessageCreate, event_id: UUID):
     db.commit()
     db.refresh(db_message)
     return db_message
+
+
+def get_messages_by_message_id(db: Session, message_id: UUID):
+    return db.query(Message).filter(Message.message_id == message_id).first()
