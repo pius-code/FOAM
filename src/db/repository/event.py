@@ -13,5 +13,9 @@ def create_event(db: Session, event: EventCreate, user_id: UUID):
     )
     db.add(db_event)
     db.commit()
-    db.refresh()
+    db.refresh(db_event)
     return db_event
+
+
+def get_Event_by_eventID(event_id: UUID, db: Session):
+    return db.query(Event).filter(Event.event_id == event_id).first()

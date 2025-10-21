@@ -16,6 +16,6 @@ def Create_event(
 ) -> EventResponse:
     user_id = get_user_id_by_email(db, event_data.user_email)
     if not user_id:
-        raise HTTPException(status_code=404, details="User_id not found")
+        raise HTTPException(status_code=404, detail="User_id not found")
     event = create_event(db, event_data, user_id=user_id)
     return EventResponse.model_validate(event, from_attributes=True)
